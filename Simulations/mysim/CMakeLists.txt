@@ -1,0 +1,98 @@
+cmake_minimum_required(VERSION 3.8.2)
+
+# CMAKE_PREFIX_PATH=/Users/eliotuci/Qt/5.9.1/clang_64/
+
+#SET ( CMAKE_PREFIX_PATH /Users/eliotuci/Qt/5.9.1/clang_64/)
+SET ( EXECUTABLE dsim )
+
+add_definitions(-D_GRAPHICS_)
+#add_definitions(-D_BULLET_WORLD_)
+
+SET(CMAKE_CXX_STANDARD 14)
+SET(  QT_USE_QTXML TRUE )
+
+SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/modules)
+
+MESSAGE( STATUS "CMAKE_MODULE_PATH:" ${CMAKE_MODULE_PATH} )
+
+SET(CMAKE_CXX_STANDARD 14)
+SET(  QT_USE_QTXML TRUE )
+
+FIND_PACKAGE(QGLViewer REQUIRED)
+SET(QGLVIEWER_INCLUDE_DIR /usr/include/QGLViewer)
+INCLUDE_DIRECTORIES(${QGLVIEWER_INCLUDE_DIR})
+
+FIND_PACKAGE( MPI )
+
+FIND_PACKAGE( Qt5Xml REQUIRED )
+FIND_PACKAGE( Qt5Widgets REQUIRED)
+FIND_PACKAGE( Qt5Core REQUIRED)
+FIND_PACKAGE( Qt5Gui REQUIRED)
+FIND_PACKAGE( Qt5OpenGL REQUIRED)
+FIND_PACKAGE( Qt5Multimedia REQUIRED)
+
+FIND_PACKAGE( Qt5 COMPONENTS Core Gui Widgets Multimedia OpenGL Gui Xml REQUIRED ) # 3DCore 3DExtras 3DRender 3DInput
+FIND_PACKAGE ( GLUT REQUIRED)
+
+FIND_PACKAGE(OpenGL REQUIRED)
+INCLUDE_DIRECTORIES( ${OPENGL_INCLUDE_DIR} ${GLUT_INCLUDE_DIRS} )  
+
+if(OPENGL_FOUND) # never true, but printed as true
+    link_directories(${OPENGL_LIBRARY_DIR})
+    include_directories(${OPENGL_INCLUDE_DIR})
+    MESSAGE( STATUS "OPENGL_INCLUDE_DIRS:" ${OPENGL_INCLUDE_DIR} )
+endif(OPENGL_FOUND)
+
+
+
+if(GLUT_FOUND)
+    link_directories(${GLUT_LIBRARY_DIRS})
+    include_directories(${GLUT_INCLUDE_DIRS})
+endif(GLUT_FOUND)
+
+SET( QT_USE_QTOPENGL TRUE )
+SET(  QT_USE_QTXML TRUE )
+
+# INCLUDE( ${QT_USE_FILE} ) FIND_PACKAGE( Qt COMPONENTS QtOpenGL opengl QtGui core REQUIRED )
+
+FILE ( GLOB SOURCES ./*.cpp ./MISC/*.cpp ./EA/*.cpp ./CONTROLLERS/*.cpp ./EXP/*.cpp ./WORLD/*.cpp ./KINETIC_SENSORS/*.cpp ./RENDERING/*.cpp ) #  
+FILE ( GLOB HEADERS ./*.h ./MISC/*.h ./EA/*.h ./CONTROLLERS/*.h ./EXP/*.h ./WORLD/*.h  ./KINETIC_SENSORS/*.h ./RENDERING/*.h ) #
+FILE ( GLOB UIS ./*.ui  ./RENDERING/*.ui )  #
+
+add_definitions(${Qt5Widgets_DEFINITIONS})
+set(CMAKE_CXX_FLAGS "${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS}")
+
+QT5_WRAP_CPP( SOURCES ${HEADERS} )
+QT5_WRAP_UI( SOURCES  ${UIS} )
+
+# /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.13.sdk/System/Library/Frameworks/OpenGL.framework/Headers /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.13.sdk/System/Library/Frameworks/AGL.framework/Headers
+
+INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH}  usr/include/QGLViewer/ /usr/local/include/ /usr/local/lib/ /home/ahmed/Bullet/src/ /usr/X11R6/include/ ${QT_QTOPENGL_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR} )
+
+# To add c++11 support
+if (MSVC) # MSVC compiler (Win32 only)
+        # Display more warnings
+        SET (CMAKE_CXX_FLAGS "/W3")
+elseif (UNIX OR CMAKE_COMPILER_IS_GNUCXX) # Clang OR Gcc (Linux, Mac OS or Win32 with MingW)
+        # Enable C++11 and displays all warnings
+        SET (CMAKE_CXX_COMPILER mpicxx)
+        SET (CMAKE_CXX_FLAGS " -std=c++11") #  -pthread -lstdc++ 
+        if (APPLE) # Clang / Mac OS only
+                # Required on OSX to compile c++11
+                SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ ") # -Xarch_i386 -mmacosx-version-min=10.7
+
+		INCLUDE_DIRECTORIES ( /System/Library/Frameworks )
+   		FIND_LIBRARY(COCOA_LIBRARY Cocoa)
+   		FIND_LIBRARY(GLUT_LIBRARY GLUT )
+   		FIND_LIBRARY(OpenGL_LIBRARY OpenGL )
+   		MARK_AS_ADVANCED (COCOA_LIBRARY
+                     		 GLUT_LIBRARY
+                     		 OpenGL_LIBRARY)
+   	        SET(OpenGL_LIBS ${COCOA_LIBRARY} ${GLUT_LIBRARY} ${OpenGL_LIBRARY})
+        endif(APPLE)
+endif()
+
+ADD_EXECUTABLE( ${EXECUTABLE} ${SOURCES})
+
+TARGET_LINK_LIBRARIES( ${EXECUTABLE}  ${LIBS} ${QGLVIEWER_LIBRARY} ${QT_QTXML_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTCORE_LIBRARY} ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}  ${PCL_LIBRARIES} ${VTK_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5Multimedia_LIBRARIES} ${Qt5Declarative_LIBRARIES} ${Qt5OpenGL_LIBRARIES} Qt5::Xml Qt5::Core Qt5::Gui Qt5::Widgets  Qt5::Multimedia ${GLUT_LIBRARIES} -L/usr/local/lib/  "-lmpi -lm -lgsl -lgslcblas") #Qt5::3DCore Qt5::3DExtras Qt5::3DRender Qt5::3DInput
+# ADD THESE LIBRARIES FOR BULLET -lBulletSoftBody -lBulletDynamics -lBulletCollision -lLinearMath

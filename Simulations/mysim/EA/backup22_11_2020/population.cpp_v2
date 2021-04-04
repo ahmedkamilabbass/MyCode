@@ -1,0 +1,304 @@
+#include "population.h"
+
+/* -------------------------------------------------------------- */
+
+Population::Population(unsigned int id,const Parameters* params,const int nb_alleles,const int nb_bases_per_allele){
+  process_id                = id;
+  m_parameters              = params;
+  m_nb_groups               = m_parameters->getNbGroups();
+  m_nb_chromosome_per_group = m_parameters->get_nb_chromosome_per_group();
+  
+  //Chose type of breeding
+  if ( !m_parameters->AreGroupsHeteroGroups() )//Homogeneous groups
+    if( !m_parameters->IsSelectionIndividual() )   //Group selection
+      m_breeding_fn_ptr = &Population::create_new_pop_homo_group;
+    else
+      m_breeding_fn_ptr = &Population::create_new_pop_homo_ind;
+  else
+    if( !m_parameters->IsSelectionIndividual() )   //Group selection
+      m_breeding_fn_ptr = &Population::create_new_pop_hete_group;
+    else
+      m_breeding_fn_ptr = &Population::create_new_pop_hete_ind;
+
+  resetStoreFitness();
+  init_chromosomes ( nb_alleles, nb_bases_per_allele );
+}
+
+/* -------------------------------------------------------------- */
+
+Population::~Population (){ }
+
+/* -------------------------------------------------------------- */
+
+void Population::init_chromosomes ( const int nb_alleles, const int nb_bases_per_allele ) {
+  
+  m_chromosome.resize     ( m_nb_groups );
+  m_old_chromosome.resize ( m_nb_groups );
+  m_tmp_chromosome.resize ( m_nb_groups );
+  
+  Chromosome <chromosome_type> *local_chromosome=new Chromosome <chromosome_type>(m_parameters->AreSolutionDiploid());
+  for (int g = 0; g < m_parameters->getNbGroups(); g++){ 
+    for(int ind = 0; ind < m_nb_chromosome_per_group; ind++){
+      local_chromosome->init_allele_values ( nb_alleles, nb_bases_per_allele );	 
+      m_chromosome[g].push_back( *local_chromosome );
+    }
+  }
+  delete local_chromosome;
+  //cerr << " m_chromosome.size = " << m_chromosome.size() << endl;
+  
+  for (int g = 0; g < m_nb_groups; g++){
+    //cerr << " m_chromosome["<<g<<"].size = " << m_chromosome[g].size() << endl;
+    for(int ind = 0; ind < m_nb_chromosome_per_group; ind++){
+      m_chromosome[g][ind].print_allele();
+    }
+  }
+  //getchar();
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::dumpStatsGenome       ( void ){
+  if( !(m_parameters->getCurrentGeneration() % m_parameters->getDumpStatsEvery() ) )
+    dumpStats();
+  if( !(m_parameters->getCurrentGeneration() % m_parameters->getDumpGenomeEvery() ) ){
+    dumpGenome();
+  }
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::resetStoreFitness( void ){
+  for(int i = 0; i < store_fitness.size(); i++){
+    store_fitness[i].erase(store_fitness[i].begin(), store_fitness[i].begin() + store_fitness[i].size() );
+    store_fitness[i].clear();
+  }
+  store_fitness.clear();
+  if( m_parameters->IsSelectionIndividual() ) 
+    store_fitness.resize( m_nb_groups * m_parameters->getNbAgentsPerGroup()  );
+  else
+    store_fitness.resize( m_nb_groups );
+  for (int i = 0; i < store_fitness.size(); i++){
+    store_fitness[i].assign( m_parameters->getNbFitObjectives(), 0.0 );
+  }
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::empty_m_tmp_chromosome( void ){
+  for(int g = 0; g < m_tmp_chromosome.size(); g++){
+    m_tmp_chromosome[g].erase (m_tmp_chromosome[g].begin(), m_tmp_chromosome[g].begin() + m_tmp_chromosome[g].size() );
+    m_tmp_chromosome[g].clear();
+  }
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::update_m_chromosome_list( const vector <int> index_list ){
+  empty_m_tmp_chromosome( );
+
+  if ( !m_parameters->AreGroupsHeteroGroups() ){//Homogeneous groups
+    if( !m_parameters->IsSelectionIndividual() ){   //Group selection
+      for(int i=0; i < index_list.size(); i++) {
+	if( index_list[i] > m_chromosome.size() )
+	  m_tmp_chromosome[i][0] = m_chromosome[index_list[i]][0];
+	else
+	  m_tmp_chromosome[i][0] = m_old_chromosome[index_list[i]][0];
+      }
+    }
+    else{//Homogeneous groups Individual selection 
+    }
+  }
+  else{//Heterogeneous groups
+    if( !m_parameters->IsSelectionIndividual() ){//Group selection
+    }
+    else{//Heterogeneous groups Individual selection 
+    }
+  }
+} 
+
+/* -------------------------------------------------------------- */
+
+void Population::copy_chromosome_into_working_pop( void ){
+
+  for(int g = 0; g < m_chromosome.size(); g++){
+    m_old_chromosome[g].erase (m_old_chromosome[g].begin(), m_old_chromosome[g].begin() + m_old_chromosome[g].size() );
+    m_old_chromosome[g].clear();
+    
+    for(int ind = 0; ind < m_nb_chromosome_per_group; ind++){  
+      m_old_chromosome[g].push_back( m_chromosome[g][ind] );
+    }
+    
+    m_chromosome[g].erase (m_chromosome[g].begin(), m_chromosome[g].begin() + m_chromosome[g].size() );
+    m_chromosome[g].clear();
+    for(int ind = 0; ind < m_nb_chromosome_per_group; ind++){  
+      m_chromosome[g].push_back( m_tmp_chromosome[g][ind] );
+    }
+  }
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::create_new_pop_homo_group ( vector <SingleStr <int>> & elite, vector <CoupleStr <int>> &parents) {
+  if( (elite.size() + parents.size()) != m_nb_groups ){
+    cerr << " There is a problem in Population::create_new_pop_homo_group elite " << elite.size() << " selected " << parents.size() << endl;
+    exit(EXIT_FAILURE);
+  }
+  empty_m_tmp_chromosome();
+  for(int g = 0; g < elite.size(); g++){ //Retain the elite unchanged 
+    m_tmp_chromosome[g].push_back ( m_chromosome[elite[g].group][0] );
+  }
+
+  Chromosome <chromosome_type> *local_chromosome=new Chromosome <chromosome_type>(m_parameters->AreSolutionDiploid());
+  for(int ind = 0; ind < parents.size(); ind++){
+    cerr << " ind = " << ind << " mum = " << parents[ind].mum << " dad = " << parents[ind].dad << " parents_size = " << parents.size() << endl;
+    if( gsl_rng_uniform(GSL_randon_generator::r_rand) < m_parameters->getProbCrossOver() ) {
+      local_chromosome->create_with_cross_over_and_mutate_operators ( m_chromosome[parents[ind].mum][0], 
+								      m_chromosome[parents[ind].dad][0], 
+								      m_parameters->getProbMutation() );
+    }
+    else{
+      local_chromosome->create_with_mutate_operator (m_chromosome[parents[ind].mum][0], m_parameters->getProbMutation());
+    }
+    m_tmp_chromosome[elite.size()+ind].push_back( *local_chromosome );
+  }
+  delete local_chromosome;
+  cerr << " m_tmp_size = " << m_tmp_chromosome.size() << endl;
+  for(int i = 0; i < m_nb_groups; i++)
+      for(int j = 0; j < m_nb_chromosome_per_group; j++)
+	m_tmp_chromosome[i][j].print_allele( );
+  
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::create_new_pop_homo_ind ( vector <SingleStr <int>> & elite, vector <CoupleStr <int>> &parents) {
+  if( (elite.size() + parents.size()) != m_nb_groups ){
+    cerr << " There is a problem in Population::create_new_pop_homo_ind elite " << elite.size() << " selected " << parents.size() << endl;
+    exit(EXIT_FAILURE);
+  }
+  empty_m_tmp_chromosome();
+  for(int g = 0; g < elite.size(); g++){ //Retain the elite unchanged
+    int group = (int)(rint((double)(elite[g].group)/(double)(m_parameters->getNbAgentsPerGroup())));
+    m_tmp_chromosome[g].push_back ( m_chromosome[group][0] );
+  }
+  
+  Chromosome <chromosome_type> *local_chromosome=new Chromosome <chromosome_type>(m_parameters->AreSolutionDiploid());
+  for(int ind = elite.size(); ind < (elite.size() + parents.size()); ind++){
+    int g_mum = (int)(rint((double)(parents[ind].mum)/(double)(m_parameters->getNbAgentsPerGroup())));
+    int g_dad = (int)(rint((double)(parents[ind].dad)/(double)(m_parameters->getNbAgentsPerGroup())));
+    //cerr << " ind = " << ind << " mum = " << g_mum << " dad = " << g_dad << endl;
+    if( gsl_rng_uniform(GSL_randon_generator::r_rand) < m_parameters->getProbCrossOver() ) {
+      local_chromosome->create_with_cross_over_and_mutate_operators ( m_chromosome[g_mum][0], 
+								      m_chromosome[g_dad][0], 
+								      m_parameters->getProbMutation() );
+    }
+    else{
+      local_chromosome->create_with_mutate_operator (m_chromosome[g_mum][0], m_parameters->getProbMutation());
+    }
+    m_tmp_chromosome[ind].push_back( *local_chromosome );
+  }
+  delete local_chromosome;
+  /* for(int i = 0; i < m_nb_groups; i++)
+    for(int j = 0; j < m_nb_chromosome_per_group; j++)
+    m_tmp_chromosome[i][j].print_allele( );*/    
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::create_new_pop_hete_group ( vector <SingleStr <int>> & elite, vector <CoupleStr <int>> &parents) {
+  if( (elite.size() + parents.size()) !=  (m_nb_groups * m_nb_chromosome_per_group) ){
+    cerr << " There is a problem in Population::create_new_pop_hete_group elite " << elite.size() << " selected " << parents.size() << endl;
+    exit(EXIT_FAILURE);
+  }
+  empty_m_tmp_chromosome();
+
+  int counter = 0;
+  for(int g = 0; g < elite.size(); g++){ //Retain the elite unchanged
+    for(int i = 0; i < m_nb_chromosome_per_group; i++){
+      m_tmp_chromosome[counter].push_back ( m_chromosome[elite[g].group][i] );
+    }
+    counter++;
+  }
+  
+  Chromosome <chromosome_type> *local_chromosome=new Chromosome <chromosome_type>(m_parameters->AreSolutionDiploid());
+  int end   = parents.size()/m_nb_chromosome_per_group;
+  int i_counter = 0;
+  for(int ind = 0; ind < end; ind++){
+    for(int i = 0; i < m_nb_chromosome_per_group; i++){ 
+      //cerr << " ind = " << ind << " mum = " << parents[i_counter].mum << " dad = " << parents[i_counter].dad << " p_size = " << parents.size() << endl;
+      if( gsl_rng_uniform(GSL_randon_generator::r_rand) < m_parameters->getProbCrossOver() ) {
+	int random_i_mum = gsl_rng_uniform_int (GSL_randon_generator::r_rand, m_nb_chromosome_per_group );
+	int random_i_dad = gsl_rng_uniform_int (GSL_randon_generator::r_rand, m_nb_chromosome_per_group );
+	local_chromosome->create_with_cross_over_and_mutate_operators(m_chromosome[parents[i_counter].mum][random_i_mum], 
+								      m_chromosome[parents[i_counter].dad][random_i_dad], 
+								      m_parameters->getProbMutation() );
+      }
+      else{
+	int random_i_mum = gsl_rng_uniform_int (GSL_randon_generator::r_rand, m_nb_chromosome_per_group );
+	local_chromosome->create_with_mutate_operator (m_chromosome[parents[i_counter].mum][random_i_mum], m_parameters->getProbMutation());
+      }
+      i_counter++;
+      m_tmp_chromosome[counter].push_back( *local_chromosome );
+    }
+    counter++;
+  }
+  delete local_chromosome;
+
+  //cerr << " counter = " << counter << endl;
+  /* for(int i = 0; i < m_nb_groups; i++)
+     for(int j = 0; j < m_nb_chromosome_per_group; j++)
+     m_tmp_chromosome[i][j].print_allele( ); */
+}
+
+/* -------------------------------------------------------------- */
+
+void Population::create_new_pop_hete_ind ( vector <SingleStr <int>> & elite, vector <CoupleStr <int>> &parents) {
+  if( (elite.size() + parents.size()) !=  (m_nb_groups * m_nb_chromosome_per_group) ){
+    cerr << " There is a problem in Population::create_new_pop_hete_group elite " << elite.size() << " selected " << parents.size() << endl;
+    exit(EXIT_FAILURE);
+  }
+  empty_m_tmp_chromosome();
+  
+  int counter = 0;
+  for(int g = 0; g < elite.size(); g++){ //Retain the elite unchanged
+    for(int i = 0; i < m_nb_chromosome_per_group; i++){
+      m_tmp_chromosome[counter].push_back ( m_chromosome[elite[g].group][i] );
+    }
+    counter++;
+  }
+
+  Chromosome <chromosome_type> *local_chromosome=new Chromosome <chromosome_type>(m_parameters->AreSolutionDiploid());
+  int end   = parents.size()/m_nb_chromosome_per_group;
+  int i_counter = 0;
+  for(int ind = 0; ind < end; ind++){
+    for(int i = 0; i < m_nb_chromosome_per_group; i++){       
+      int g_mum = (int)(rint((double)(parents[i_counter].mum)/(double)(m_nb_chromosome_per_group)));
+      int i_mum = parents[i_counter].mum % m_nb_chromosome_per_group;
+      cerr << " ind = " << ind << " g_mum = " << g_mum
+	   << " i_mum = " << i_mum << " i_counter = " << i_counter;
+      if( gsl_rng_uniform(GSL_randon_generator::r_rand) < m_parameters->getProbCrossOver() ) {
+	int g_dad = (int)(rint((double)(parents[i_counter].dad)/(double)(m_nb_chromosome_per_group)));
+	int i_dad = parents[i_counter].dad % m_nb_chromosome_per_group;
+	cerr << " ind = " << ind << " g_dad = " << g_dad
+	     << " i_dad = " << i_dad << endl;
+	local_chromosome->create_with_cross_over_and_mutate_operators(m_chromosome[g_mum][i_mum], 
+								      m_chromosome[g_dad][i_dad], 
+								      m_parameters->getProbMutation() );
+      }
+      else{
+	local_chromosome->create_with_mutate_operator (m_chromosome[g_mum][i_mum], m_parameters->getProbMutation());
+      }
+      i_counter++;
+      m_tmp_chromosome[counter].push_back( *local_chromosome );
+    }
+    counter++;
+  }
+  delete local_chromosome;
+
+  cerr << " counter = " << counter << endl;
+  for(int i = 0; i < m_nb_groups; i++)
+    for(int j = 0; j < m_nb_chromosome_per_group; j++)
+      m_tmp_chromosome[i][j].print_allele( );
+}
+
+/* -------------------------------------------------------------- */

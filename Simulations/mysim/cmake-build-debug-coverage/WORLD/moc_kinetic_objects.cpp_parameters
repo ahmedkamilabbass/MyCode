@@ -1,0 +1,10 @@
+-I/usr/include/QGLViewer
+-I/usr/include
+-I/usr/include
+-D_GRAPHICS_
+-DQT_WIDGETS_LIB
+-DQT_GUI_LIB
+-DQT_CORE_LIB
+-o
+/home/ahmed/CLionProjects/mysim/cmake-build-debug-coverage/WORLD/moc_kinetic_objects.cpp
+/home/ahmed/CLionProjects/mysim/WORLD/kinetic_objects.h

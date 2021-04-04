@@ -1,0 +1,6 @@
+ssh -i ~/.ssh/id_rsa.ceci etuci@nic4.segi.ulg.ac.be
+psw = la solita con la prima lettera maiuscola e ? alla fine
+
+module load Bullet/2.88-foss-2016b
+module load CMake/3.7.1-foss-2016b
+module load GSL/2.1-foss-2016b

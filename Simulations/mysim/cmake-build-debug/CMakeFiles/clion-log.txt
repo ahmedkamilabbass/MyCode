@@ -1,0 +1,69 @@
+/opt/clion-2020.2.4/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/ahmed/CLionProjects/mysim
+CMake Warning (dev) in CMakeLists.txt:
+  No project() command is present.  The top-level CMakeLists.txt file must
+  contain a literal, direct call to the project() command.  Add a line of
+  code such as
+
+    project(ProjectName)
+
+  near the top of the file, but after cmake_minimum_required().
+
+  CMake is pretending there is a "project(Project)" command on the first
+  line.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- The C compiler identification is GNU 9.3.0
+-- The CXX compiler identification is GNU 9.3.0
+-- Check for working C compiler: /usr/bin/cc
+-- Check for working C compiler: /usr/bin/cc - works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ - works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- CMAKE_MODULE_PATH:/home/ahmed/CLionProjects/mysim/modules
+CMake Warning (dev) at /opt/clion-2020.2.4/bin/cmake/linux/share/cmake-3.17/Modules/FindPackageHandleStandardArgs.cmake:272 (message):
+  The package name passed to `find_package_handle_standard_args` (QGLVIEWER)
+  does not match the name of the calling package (QGLViewer).  This can lead
+  to problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  modules/FindQGLViewer.cmake:53 (find_package_handle_standard_args)
+  CMakeLists.txt:21 (FIND_PACKAGE)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Could NOT find QGLVIEWER (missing: QGLVIEWER_INCLUDE_DIR) 
+-- Found MPI_C: /usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi.so (found version "3.1") 
+-- Found MPI_CXX: /usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi_cxx.so (found version "3.1") 
+-- Found MPI: TRUE (found version "3.1")  
+-- Found GLUT: /usr/lib/x86_64-linux-gnu/libglut.so  
+CMake Warning (dev) at /opt/clion-2020.2.4/bin/cmake/linux/share/cmake-3.17/Modules/FindOpenGL.cmake:305 (message):
+  Policy CMP0072 is not set: FindOpenGL prefers GLVND by default when
+  available.  Run "cmake --help-policy CMP0072" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  FindOpenGL found both a legacy GL library:
+
+    OPENGL_gl_LIBRARY: /usr/lib/x86_64-linux-gnu/libGL.so
+
+  and GLVND libraries for OpenGL and GLX:
+
+    OPENGL_opengl_LIBRARY: /usr/lib/x86_64-linux-gnu/libOpenGL.so
+    OPENGL_glx_LIBRARY: /usr/lib/x86_64-linux-gnu/libGLX.so
+
+  OpenGL_GL_PREFERENCE has not been set to "GLVND" or "LEGACY", so for
+  compatibility with CMake 3.10 and below the legacy GL library will be used.
+Call Stack (most recent call first):
+  CMakeLists.txt:37 (FIND_PACKAGE)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Found OpenGL: /usr/lib/x86_64-linux-gnu/libOpenGL.so   
+-- OPENGL_INCLUDE_DIRS:/usr/include
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/ahmed/CLionProjects/mysim/cmake-build-debug

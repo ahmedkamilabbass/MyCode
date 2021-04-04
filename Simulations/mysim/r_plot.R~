@@ -1,0 +1,2 @@
+data <- read.table(as.matrix("/home/elio/Simulations/my_nsga/GENOME/fitness.txt"))
+plot(data[,1], data[,2], type="p", xlim=c(0,4), ylim=c(0,4))

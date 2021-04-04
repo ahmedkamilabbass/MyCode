@@ -1,0 +1,19 @@
+Type of controller: 
+      Probabilistic Finite State Machine
+--------------------------------
+	
+Number of input node      	    =  9
+Number of output node               =  2
+rho                                 =  0.6
+rho equal to 1 zero turning angle - rho equal to 0 angle drawn from uniform distribution in [-PI, PI]
+
+wheel_speed_during_forward_movement = 0.8
+This parameters has to be set in (0.5, 1]
+wheel_speed_during_rotation         = 0.4
+forward_movement_lenght             = 100;
+
+-----------------------------------------------
+-	e n d   o f   p a r a m e t e r s         -
+-----------------------------------------------
+
+This is just a check at the end = 999

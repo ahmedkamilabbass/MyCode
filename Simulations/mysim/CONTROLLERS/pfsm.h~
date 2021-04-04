@@ -1,0 +1,87 @@
+#ifndef _PFSM_
+#define _PFSM_
+
+#include "controller.h"
+
+template<class T>
+struct NotesStruct
+{
+  T N;
+  T O;
+  T L;
+};
+
+template<class T>
+NotesStruct <T> MakePairs (T _N, T _O, T _L )
+{
+  NotesStruct<T> ret;
+  ret.N = _N;
+  ret.O = _O;
+  ret.L = _L;
+  return ret;
+}
+
+class Pfsm : public Controller
+{
+  
+ private:
+  double rho; //rho = 1 zero turning angle - rho = 0 angle drawn from uniform distribution in [0, PI]
+  int    forward_movement_lenght;  
+  int    m_turning_lenght;
+  double angular_velocity;
+  double wheel_speed_during_forward_movement;
+  double wheel_speed_during_rotation;
+
+  int    m_count_step_turn;
+  int    m_count_step_forward;
+  int    m_count_step_to_sound_emission;
+  int    m_interval_to_sound_emission;
+  int    m_count_step_in_sound_emission_state;
+  int    id;
+  vector < NotesStruct <double> > m_notes;
+  
+  const char note[13][50] =  {"Silence", "Do", "Dodiese", "Re", "Rediese", "Mi", "Fa", "Fadiese", "Sol", "Soldiese", "La", "Ladiese", "Si"};
+  //const char note[4][50] =  {"Silence", "Do", "Mi", "Sol"};
+  const int  octave[11] = {0,1,2,3,4,5,6,7,8,9,10};
+  const char length[7][50] = {"Noire", "Blanche", "Ronde"};
+  //"Ronde", "Blanche", "Noire", "Croche", "Doublecroche", "Triplecroche", "Quadruplecroche"};
+
+
+  void copy(const Pfsm &other);
+  void allocate( );
+  void destroy();
+
+ public:
+  Pfsm(  int id );
+  Pfsm(const Pfsm& other);
+  virtual ~Pfsm();
+  
+  
+  /* -------------------------------------------------------------------------------------------------- */
+  /*                                             VIRTUAL FUNCTIONS                                      */
+  /* -------------------------------------------------------------------------------------------------- */
+  void init                          ( const vector <chromosome_type> &genes );
+  void step                          ( const vector <double> &input_array, vector <double> &output_array);
+  void reset                         ( void );
+  void read_from_file                ( void );
+  void compute_genotype_length       ( void );
+  /* -------------------------------------------------------------------------------------------------- */
+  /* -------------------------------------------------------------------------------------------------- */
+
+  int  random_turn_lenght            ( void );
+  void move_forward                  ( vector <double> &output );
+  void stay_still                    ( vector <double> &output );
+  void turn_right_on_spot            ( vector <double> &output );
+  void turn_left_on_spot             ( vector <double> &output );
+  void emit_sound                    ( vector <double> &output );
+  void silence                       ( vector <double> &output );
+  
+  bool is_robot_in_sound_emission     ( const vector <double> &input, vector <double> &output);
+  bool is_robot_in_turn_on_spot_state ( const vector <double> &input, vector <double> &output);
+  void do_random_walk                 ( const vector <double> &input, vector <double> &output);
+  void save_sound_tracks              ( void );
+  
+  Pfsm& operator=(const Pfsm &other);
+};
+
+#endif

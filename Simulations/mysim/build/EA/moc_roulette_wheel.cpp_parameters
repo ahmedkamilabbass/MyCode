@@ -1,0 +1,10 @@
+-I/usr/include/QGLViewer
+-I/usr/include
+-I/usr/include
+-D_GRAPHICS_
+-DQT_WIDGETS_LIB
+-DQT_GUI_LIB
+-DQT_CORE_LIB
+-o
+/home/ahmed/Simulations/mysim/build/EA/moc_roulette_wheel.cpp
+/home/ahmed/Simulations/mysim/EA/roulette_wheel.h

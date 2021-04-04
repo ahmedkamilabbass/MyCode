@@ -1,0 +1,294 @@
+#include "roulette_wheel.h"
+
+/* -------------------------------------------------------------- */
+
+Roulette_wheel::Roulette_wheel ( unsigned int id, const Parameters* params, const int nb_alleles, const int nb_bases_per_allele ) : Population ( id, params, nb_alleles, nb_bases_per_allele ){ }
+
+/* -------------------------------------------------------------- */
+
+Roulette_wheel::~Roulette_wheel ( void ){}
+
+/* -------------------------------------------------------------- */
+
+void Roulette_wheel::assign_fitness( void ){
+  m_sum_of_fitness = 0.0;
+  fitness.erase(fitness.begin(), fitness.begin() + fitness.size() );
+  fitness.clear();
+  
+  for(int i = 0; i < store_fitness.size(); i++){
+    fitness.push_back( MakeValueWithIndex(store_fitness[i][0], i) );
+    m_sum_of_fitness += store_fitness[i][0]; // store_fitness[i][0] is the fitness of individual i for the objective 0
+  }
+  std::sort(fitness.begin(), fitness.end(), acompare<double> ); // sort in ascending order from lower to higher value
+  for(int i = 0; i < fitness.size(); i++){
+    cerr << " Ind = " << i << " index = " << fitness[i].index << " fit value = " << fitness[i].value << endl;
+  }
+  getchar();
+  
+}
+
+/* -------------------------------------------------------------- */
+
+void Roulette_wheel::breeding ( void ) {
+  
+  compute_probabilities_of_selection();
+
+  //Set here the elite
+  vector <SingleStr <int>> elite;
+  for(int e = 0; e < m_parameters->getNbElite(); e++){
+    if( m_parameters->getTypeOfDominance()[0] == "maximise"){
+      elite.push_back( MakeSingle ( fitness[fitness.size()-1-e].index ) );
+    }
+    else{
+      elite.push_back( MakeSingle ( fitness[e].index ) );
+    }
+  }
+
+  //Choose for reproduction
+  if ( !m_parameters->AreGroupsHeteroGroups()  )
+    nb_new_ind = m_nb_groups - elite.size(); //the elite.size() refers to the number of groups
+  if ( m_parameters->AreGroupsHeteroGroups() ) {
+    if( m_parameters->IsSelectionIndividual() )
+      nb_new_ind = m_nb_groups * m_nb_chromosome_per_group - elite.size(); //the elite.size() refers to the number of individuals
+    else if ( !m_parameters->IsSelectionIndividual() )
+      nb_new_ind = m_nb_groups - elite.size(); //the elite.size() refers to the number of groups
+  }
+  vector <CoupleStr <int>> parents;
+  vector <int> selected;
+  for (int i = 0; i < nb_new_ind; i++ ){
+    select_parents ( selected );
+    parents.push_back( MakeCouple (fitness[selected[0]].index, fitness[selected[1]].index ) );
+    //cerr << " ind = " << i << " mum = " << parents[i].mum << " dad = " << parents[i].dad << endl; 
+  }
+
+  (this->*m_breeding_fn_ptr)( elite, parents );
+  copy_chromosome_into_working_pop();
+  
+  if( !(m_parameters->getCurrentGeneration() % m_parameters->getDumpGenomeEvery() ) )
+    dumpGenome();
+}
+
+/* -------------------------------------------------------------- */
+
+void Roulette_wheel::compute_probabilities_of_selection ( void ){
+  //transform all fitness values in positive numbers
+  if( m_parameters->getTypeOfDominance()[0] == "maximise"){
+    if( fitness[0].value < 0.0 ){
+      m_sum_of_fitness = 0.0;
+      double min_val = fabs ( fitness[0].value );
+      for(int i = 0; i < fitness.size(); i++){
+	fitness[i].value += min_val;
+	m_sum_of_fitness += fitness[i].value;
+      }
+    }
+  }
+  else{//minimise
+    if( fitness[0].value < 0.0 ){
+      cerr <<" In Roulette_wheele.cpp : the fitness can not be smaller than zero " << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  proporational_fitness_selection();
+  
+  //if( m_parameters->getCurrentGeneration() == 0 )
+  //rank_based_selection( );
+}
+
+/* -------------------------------------------------------------- */
+
+void Roulette_wheel::proporational_fitness_selection( void ){
+  vector <double> ProbSelection;
+  for(int i = 0; i < fitness.size(); i++){
+    ProbSelection.push_back(  fitness[i].value/m_sum_of_fitness  );
+  }
+  double probSum = 0.0;
+  wheelProbList.erase(wheelProbList.begin(), wheelProbList.begin() + wheelProbList.size() );
+  wheelProbList.clear();
+  if( m_parameters->getTypeOfDominance()[0] == "maximise"){
+    for(int i = 0; i < fitness.size(); i++){
+      probSum += ProbSelection[i];
+      wheelProbList.push_back( probSum );
+    }
+  }
+  else{
+    cerr << " minimise " << endl;
+    for(int i = 0; i < fitness.size(); i++){
+      probSum += ((1.0 - ProbSelection[i])) / ((double)(fitness.size()-1));
+      wheelProbList.push_back( probSum );
+    }
+  }
+
+  /*  for(int i = 0; i < fitness.size(); i++){
+      cerr << " wheelProblist["<< i <<"] = " << wheelProblist[i]
+      << "  ProbSelection["<<i<<"] = " << ProbSelection[i]
+      << " Fit = " << fitness[i].value
+      << " sum fit = " << m_sum_of_fitness
+      << endl;
+      }
+      getchar(); */
+}
+
+// /* -------------------------------------------------------------- */
+
+// void Roulette_wheel::rank_based_selection( void ){
+//   double selective_pressure = 2.0;
+  
+//   ProbSelection.erase(ProbSelection.begin(), ProbSelection.begin() + ProbSelection.size() );
+//   ProbSelection.clear();
+//   for(int i = 0; i < fitness.size(); i++){
+//     ProbSelection.push_back( (2.0 - selective_pressure) + 
+// 			     2.0 * (selective_pressure - 1.0)*
+// 			     ((double)(i)/(double)(fitness.size()-1)) );
+   
+//   }
+//   for(int i = 0; i < fitness.size(); i++){
+//     ProbSelection[i] /= ProbSelection.back();
+//     //cerr << " ProbSelection[ "<< i <<"] = " << ProbSelection[i] << endl;
+//   }
+//   //getchar();
+// }
+
+// /* -------------------------------------------------------------- */
+
+void Roulette_wheel::select_parents ( vector <int> &selected ){
+  selected.erase(selected.begin(), selected.begin() + selected.size());
+  selected.clear();
+  selected.resize( 2 );
+  
+  //Select mum
+  double NbRnd = 0.0;
+  int mum;
+  if( m_parameters->getNbSolutionsTruncated() ){
+    NbRnd = wheelProbList[m_parameters->getNbSolutionsTruncated()-1] +
+//       (gsl_rng_uniform (GSL_randon_generator::r_rand) * (ProbSelection.back() -
+// 							 ProbSelection[m_parameters->getNbSolutionsTruncated()-1]) );
+//     if( NbRnd > 1.0 ){
+//       cerr <<" In Roulette_wheele.cpp : in select parents something went wrong  " << endl;
+//       exit(EXIT_FAILURE);
+//     }
+//   }
+//   else{
+//     NbRnd = gsl_rng_uniform (GSL_randon_generator::r_rand) * ProbSelection.back();
+//   }
+  
+//   for (int i = m_parameters->getNbSolutionsTruncated(); i < ProbSelection.size(); i++){
+//     if( NbRnd < ProbSelection[i] ){
+//       mum = i;
+//       break;
+//     }
+//   }
+
+//   //Select dad different from mum
+//   int dad = mum;
+//   unsigned int iter = 0;
+//   do{
+//     if( m_parameters->getNbSolutionsTruncated()){
+//       NbRnd = ProbSelection[m_parameters->getNbSolutionsTruncated()-1] +
+// 	(gsl_rng_uniform (GSL_randon_generator::r_rand) * (ProbSelection.back() -
+// 							   ProbSelection[m_parameters->getNbSolutionsTruncated()-1]) );
+//       if( NbRnd > 1.0 ){
+// 	cerr <<" In Roulette_wheele.cpp : select group wrong  " << endl;
+// 	exit(EXIT_FAILURE);
+//       }
+//     }
+//     else{
+//       NbRnd = gsl_rng_uniform (GSL_randon_generator::r_rand) * ProbSelection.back();
+//     }
+    
+    
+//     for (int i = m_parameters->getNbSolutionsTruncated(); i < ProbSelection.size(); i++){
+//       if( NbRnd < ProbSelection[i]){
+// 	dad = i;
+// 	break;
+//       }
+//    }
+//     iter++;
+//   }while( mum == dad && iter < 10);
+
+//   int selected_mum_group, first_ind, selected_dad_group, second_ind;
+//   if( !m_parameters->IsSelectionIndividual() ){//Group selection
+//     if( m_parameters->AreGroupsHeteroGroups() ){//Heterogeneous groups
+//       //Select the group based on fitness
+//       //Select the individual (i.e., solutions) randomly choosing between 0 and (m_nb_chromosome_per_group - 1)
+//       selected_mum_group = (int)(floor( (double)(fitness[mum].index)/(double)(m_nb_chromosome_per_group)));
+//       first_ind          = (int)(gsl_rng_uniform_int (GSL_randon_generator::r_rand, m_nb_chromosome_per_group ));
+//       selected_dad_group = (int)(floor( (double)(fitness[dad].index)/(double)(m_nb_chromosome_per_group)));
+//       second_ind         = (int)(gsl_rng_uniform_int (GSL_randon_generator::r_rand, m_nb_chromosome_per_group ));
+//     }
+//     else{//Homogeneous groups
+//       //Select the group based on fitness
+//       //The individual is always 0 in this case, becasue there is only 1 solution per each group
+//       selected_mum_group  = fitness[mum].index;
+//       first_ind           = 0;
+//       selected_dad_group  = fitness[dad].index;
+//       second_ind          = 0;
+//     }
+//   }
+//   else{//Individual selection
+//     //Select the group based on fitness
+//     //Select the individual based on fitness;
+//     selected_mum_group  = (int)(floor( (double)(fitness[mum].index)/(double)(m_nb_chromosome_per_group)));
+//     first_ind           = (int)(fitness[mum].index % m_nb_chromosome_per_group);
+//     selected_dad_group  = (int)(floor( (double)(fitness[dad].index)/(double)(m_nb_chromosome_per_group)));
+//     second_ind          = (int)(fitness[dad].index % m_nb_chromosome_per_group);
+//   }
+  
+//   parents.push_back( MakePairs ( selected_mum_group, first_ind  ) );
+//   parents.push_back( MakePairs ( selected_dad_group, second_ind ) );
+// }
+
+// /* -------------------------------------------------------------- */
+
+void Roulette_wheel::dumpStats( void )
+ {
+//   char fname_statistics[500];
+//   sprintf(fname_statistics, "%s%s%d.data", m_parameters->getStatsFileDir().c_str(), m_parameters->getRunName().c_str(), process_id ); 
+//   ofstream outfile;
+//   outfile.open (fname_statistics, ios::app);
+//   outfile.setf(ios::fixed);
+  
+//   outfile << " " << m_parameters->getCurrentGeneration()
+// 	  << " " << fitness[fitness.size()-1].value //The fitness of the best
+// 	  << " " << m_sum_of_fitness/(double)((m_parameters->getNbGroups() * m_nb_chromosome_per_group)) // the mean fitness
+// 	  << " " << fitness[0].value //the fitness of the worst
+// 	  << endl;
+//   outfile.close();
+}
+
+/* ---------------------------------------- */
+
+void Roulette_wheel::dumpGenome( void )
+{
+//   char fname_genome[500];
+//   sprintf(fname_genome, "%s%s%d_pop_G%d.geno", m_parameters->getGenomeFileDir().c_str(), m_parameters->getRunName().c_str(), process_id, m_parameters->getCurrentGeneration() );
+//   ofstream out ( fname_genome );
+//   out.setf( ios::fixed );
+  
+//   for(unsigned int p=0; p< (m_nb_groups * m_nb_chromosome_per_group ); p++) {
+//     int group_id, ind_id;
+    
+//     //Choose type of breeding
+//     if((m_nb_groups*m_nb_chromosome_per_group) == (m_parameters->getNbGroups()* m_parameters->getNbAgentsPerGroup()) ){
+//       group_id  = (int)(floor( (double)(fitness[fitness.size()-1-p].index)/(double)( m_nb_chromosome_per_group )));
+//       ind_id    = (int)(fitness[fitness.size()-1-p].index % m_nb_chromosome_per_group);
+//     }
+//     else if((m_nb_groups*m_nb_chromosome_per_group) == m_parameters->getNbGroups() ){
+//       group_id  = p;
+//       ind_id    = 0;
+//     }
+//     else{
+//       cerr <<" In Roulette_wheele.cpp (dumpGenome) : select group/ind wrong  " << endl;
+//       exit(EXIT_FAILURE);
+//     }
+    
+//     out << "" << m_chromosome[group_id][ind_id].get_allele_values().size();
+//     for(int n=0; n<m_chromosome[group_id][ind_id].get_allele_values().size(); n++){
+//       out << " " << setprecision(15) << m_chromosome[group_id][ind_id].get_allele_values()[n]; 
+//     }
+//     out << " " << fitness[fitness.size()-1-p].index;
+//     out << " " << fitness[fitness.size()-1-p].value << endl;
+//   }
+//   out.close();
+}
+
+// /* ---------------------------------------- */

@@ -1,0 +1,80 @@
+INIT RUN parameters - NOTE THAT
+
+Total number of genotypes % Number cores equal 0
+
+--------------
+
+Number of Evolutionary Generations    = 1000
+Number of Evaluations                 = 4
+Number of Iterations                  = 2000
+Number of Groups in a Population      = 64
+
+Number of Agents per Group            = 20
+Are solutions diploid?  (Y or N)      = N
+Are groups heterogeneous? (Y or N)    = N
+Is selection individual? (Y or N)     = N
+Number Evolving populations           = 1 This has to be 1 for the time being
+
+The following three parameters are for the evolutionary multi-objective optimisation algorithm (emoo)
+Number of Fitness Objectives          = 1
+Tournament size                       = 2 Better not to touch this parameter
+Type of dominance                     = maximise / minimise / minimise
+The options are: minimise and maximise; Don't forget to put the "equal" sign in front of minimise/maximise; You need to have has many types as the number of objectives
+
+Number of Genotypes Truncated         = 20 This works only for the roulette_wheel GA
+Elite (Y/N)                           = Y  This works only for the roulette_wheel and tournament GA
+Probability of Mutation               = 0.03
+Probability of Recombination          = 0.3
+
+Dump statistics every                 = 1
+Dump genome every                     = 1
+
+Choose dir name where to dump data    = /DATA/
+Choose dir name where to dump genome  = /GENOME/
+
+Choose type of evolutionary algorithm = tournament
+(Current Options: tournament, roulette_wheel, emoo )
+
+Choose type of control system         = ctrnn_three_layers
+(Current Options: ctrnn_three_layers - ctrnn_three_layers_hebb - simple_three_layers - perceptron - elman - ctrnn_fully_recurrent - pfsm)
+
+
+Robot World Characteristics
+-----------------------------------
+
+Simulation Time Step   = 0.1 This value 0.13 is for bullet based epuck (0.1 for kimematic epuck)
+Number of bricks       = 4
+Number of cylinders    = 0
+Number of spheres      = 0
+
+Number of properties   = 16
+(you need to have at least 16 properties listed below)
+
+LIST OF PROPERTIES
+1)  x position:                                 = 1.0   = 0.0      = 1.0    = 2.0
+2)  y position:                                 = 0.0   = 1.0      = 2.0    = 1.0
+3)  z position:                                 = 0.0   = 0.0      = 0.0    = 0.0
+4)  length:                                     = 2.0   = 2.0      = 2.0    = 2.0
+5)  width:                                      = 0.001 = 0.001    = 0.001  = 0.001
+6)  height:                                     = 0.11  = 0.11     = 0.11   = 0.11
+7)  rotation on XZ plain                        = 0.0   = 90.0     = 0.0    = 90.0
+8)  colour R:                                   = 0.0   = 0.0      = 0.0    = 0.0
+9)  colour G:                                   = 0.0   = 0.0      = 0.0    = 0.0
+10) colour B:                                   = 1.0   = 1.0      = 1.0    = 1.0
+11) mass:                                       = 0.600 = 0.600    = 0.600  = 0.600
+12) restitution:                                = 0.0   = 0.0      = 0.0    = 0.0
+13) friction:                                   = 0.5   = 0.5      = 0.5    = 0.5
+14) rolling m_friction:                         = 0.0   = 0.0      = 0.0    = 0.0
+15) linear velocity damping:                    = 0.8   = 0.8      = 0.8    = 0.8
+16) angluar velocity damping:                   = 0.9   = 0.9      = 0.9    = 0.9
+-----------------------------------------------
+-	e n d   o f   p a r a m e t e r s         -
+-----------------------------------------------
+This is just a check at the end = 999
+
+
+               STORE FITNESS SIZE           GENOME SIZE     
+HOMO GROUP | nb groups             | nb groups             |
+HOMO IND   | nb groups * ng agents | nb groups             |
+HETE GROUP | nb groups             | nb groups * ng agents |
+HETE IND   | nb groups * ng agents | nb groups * ng agents |
